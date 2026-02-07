@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <title>自定义内容</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="light dark" />
+  <link href="/assets/css/style.css" rel="stylesheet" type="text/css" />
+  <script src="/assets/js/script.js"></script>
+</head>
+<body>
+
+    <div class="card">
+
+        <div class="top-bar">
+            <div class="nav-brand">
+                <img class="logo-small" src="/favicon.png" alt="自定义内容" />
+                <span id="visualTitle" class="page-title-text"></span>
+            </div>
+            <div id="headerMenuContainer"></div>
+        </div>
+
+        <div class="cardin center animate" style="max-width: 420px !important">
+            <div id="loginSection">
+                <p class="sub" id="pageSub">Welcome to 自定义内容. The world you connect to.</p>
+                <input type="email" id="email" class="form-input" placeholder="邮箱" />
+                <input type="password" id="password" class="form-input" placeholder="密码" />
+                <button id="loginBtn" class="form-button primary"><span class="btn__label">确认账户</span></button>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+
+        // 登录逻辑
+        async function handleLogin() {
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value.trim();
+            const btn = document.getElementById('loginBtn');
+            btn.disabled = true; btn.classList.add('btn--loading');
+            try {
+                const res = await fetch(`${API_BASE}/api/v1/passport/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
+                const d = await res.json();
+                if (d.status === 'success') {
+                    localStorage.setItem(TOKEN_KEY, d.data.auth_data);
+                    localStorage.setItem('auth_email', email);
+                    window.location.href = '/overview/';
+                } else { alert("账户确认失败: " + d.message); }
+            } catch (e) { alert("网络异常"); } finally { btn.disabled = false; btn.classList.remove('btn--loading'); }
+        }
+
+        // 初始化执行
+        (function init() {
+            injectMenu();
+            const loginBtn = document.getElementById('loginBtn');
+            if (loginBtn) loginBtn.addEventListener('click', handleLogin);
+        })();
+    </script>
+</body>
+</html>

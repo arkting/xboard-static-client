@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <title>自定义内容</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="light dark" />
+  <link href="/assets/css/style.css" rel="stylesheet" type="text/css" />
+  <script src="/assets/js/script.js"></script>
+</head>
+<body>
+
+    <div class="card">
+
+        <div class="top-bar">
+            <div class="nav-brand">
+                <img class="logo-small" src="/favicon.png" alt="自定义内容" />
+                <span id="visualTitle" class="page-title-text">变更订阅</span>
+            </div>
+            <div id="headerMenuContainer"></div>
+        </div>
+
+        <div class="cardin center animate">
+            
+            <div class="order-item" style="display: block; margin-bottom: 20px;">
+                <div class="info-row" style="margin-bottom: 0;">
+                    <span style="font-weight: 500;">账户余额</span>
+                    <span style="font-weight: 600; color: var(--primary-color);">¥ <span id="topBalance">0.00</span></span>
+                </div>
+            </div>
+
+            <div class="h20"></div>
+
+            <div id="plansContainer">
+                <p class="sub" style="margin-top: 20px;">Loading ···</p>
+            </div>
+            
+            <div class="h40"></div>
+
+            <p class="sub" style="opacity: 0.5; font-size: 12px;">变更计划后，原持有订阅的剩余价值将根据系统规则进行折抵或覆盖。</p>
+        </div>
+    </div>
+
+    <div id="specsSheet" class="specs-sheet"></div>
+
+  <script>
+    const PeriodMap = {
+        'month_price': '月付',
+        'quarter_price': '季付',
+        'half_year_price': '半年付',
+        'year_price': '年付',
+        'two_year_price': '两年付',
+        'three_year_price': '三年付',
+        'onetime_price': '一次性',
+        'reset_price': '重置包'
+    };
+
+    let allPlansData = [];
+
+    function initPlans() {
+        const headers = { 'Authorization': authToken };
+        
+        // 获取余额
+        fetchWithCache(`${API_BASE}/api/v1/user/info`, { headers }, (json) => {
+            if(json.data) {
+                document.getElementById('topBalance').textContent = (json.data.balance / 100).toFixed(2);
+            }
+        });
+
+        // 获取计划
+        fetchWithCache(`${API_BASE}/api/v1/user/plan/fetch`, { headers }, (json, isFromCache) => {
+            const container = document.getElementById('plansContainer');
+            
+            if (json.data && json.data.length > 0) {
+                container.innerHTML = '';
+                allPlansData = json.data;
+                
+                json.data.forEach(plan => {
+                    // 检查是否有有效价格
+                    let hasPrice = false;
+                    for (const key of Object.keys(PeriodMap)) {
+                        if (plan[key] > 0) { hasPrice = true; break; }
+                    }
+                    if (!hasPrice && plan.price <= 0) return;
+
+                    const isBtnDisabled = isFromCache; 
+                    const btnText = isFromCache ? '···' : '立即订阅';
+                    const btnStyle = isFromCache ? 'opacity: 0.6;' : '';
+
+                    const card = document.createElement('div');
+                    card.className = 'order-item plan-card-wrap';
+                    card.style.display = 'block';
+                    
+                    card.innerHTML = `
+                        <div class="info-row">
+                            <h2 style="margin-bottom:0;">${plan.name}</h2>
+                        </div>
+                        <hr class="section-divider">
+                        <div class="plan-desc">${plan.content || '暂无描述'}</div>
+
+                        <button class="form-button primary" 
+                                style="margin-top:0; ${btnStyle}" 
+                                ${isBtnDisabled ? 'disabled' : ''}
+                                onclick="showSpecs(${plan.id})">
+                            <span class="btn__label">${btnText}</span>
+                        </button>
+                    `;
+                    container.appendChild(card);
+                });
+
+                if (container.children.length === 0) container.innerHTML = '<p class="sub">暂无可用订阅计划</p>';
+            } else {
+                container.innerHTML = '<p class="sub">无法加载订阅计划</p>';
+            }
+        });
+    }
+
+    // 显示规格选择菜单
+    function showSpecs(planId) {
+        const plan = allPlansData.find(p => p.id === planId);
+        if (!plan) return;
+
+        const sheet = document.getElementById('specsSheet');
+        const overlay = document.getElementById('menuOverlay');
+
+        // 生成按钮
+        let buttonsHtml = '';
+        for (const [key, label] of Object.entries(PeriodMap)) {
+            const price = plan[key];
+            if (price !== undefined && price !== null && Number(price) > 0) {
+                buttonsHtml += `
+                    <button class="form-button primary" style="margin-top:0;" onclick="orderPlan(${plan.id}, '${key}', this)">
+                        <span class="spec-btn-content">
+                            <span>${label}</span>
+                            <span>¥${(price / 100).toFixed(2)}</span>
+                        </span>
+                    </button>
+                `;
+            }
+        }
+        sheet.innerHTML = buttonsHtml;
+
+        if(overlay) overlay.classList.add('show');
+        sheet.classList.add('show');
+        document.body.style.overflow = 'hidden';
+    }
+
+    // 关闭规格选择菜单
+    function closeSpecs() {
+        const sheet = document.getElementById('specsSheet');
+        const overlay = document.getElementById('menuOverlay');
+        
+        if(sheet) sheet.classList.remove('show');
+        // script.js 也会监听 overlay 点击并移除 show，这里主动移除是双重保险
+        if(overlay) overlay.classList.remove('show');
+        
+        document.body.style.overflow = '';
+    }
+
+    // 下单逻辑
+    async function orderPlan(planId, period, btn) {
+        if (btn.disabled) return;
+        
+        const originalHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.style.opacity = '0.7';
+        btn.innerHTML = '<span class="spec-btn-content" style="justify-content:center;">下单中...</span>';
+
+        try {
+            const res = await fetch(`${API_BASE}/api/v1/user/order/save`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': authToken },
+                body: JSON.stringify({ plan_id: planId, period: period })
+            });
+            const json = await res.json();
+
+            if (json.data) {
+                closeSpecs();
+                window.location.href = '/checkout/';
+            } else {
+                alert(json.message || '下单失败');
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                btn.innerHTML = originalHtml;
+            }
+        } catch (e) {
+            alert('网络错误，请稍后重试');
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            btn.innerHTML = originalHtml;
+        }
+    }
+
+    (function init() {
+      injectMenu();
+      
+      const overlay = document.getElementById('menuOverlay');
+      if(overlay) {
+          overlay.addEventListener('click', () => {
+              const sheet = document.getElementById('specsSheet');
+              if(sheet && sheet.classList.contains('show')) {
+                  closeSpecs();
+              }
+          });
+      }
+
+      if (authToken && currentPath !== '/' && currentPath !== '/index.html') {
+        initPlans();
+      }
+    })();
+  </script>
+</body>
+</html>

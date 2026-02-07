@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8" />
+    <title>自定义内容</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <link href="/assets/css/style.css" rel="stylesheet" type="text/css" />
+    <script src="/assets/js/script.js"></script>
+</head>
+<body>
+
+    <div class="card">
+
+        <div class="top-bar">
+            <div class="nav-brand">
+                <img class="logo-small" src="/favicon.png" alt="自定义内容" />
+                <span id="visualTitle" class="page-title-text">收银台</span>
+            </div>
+            <div id="headerMenuContainer"></div>
+        </div>
+
+        <div class="cardin center animate">
+            <div id="checkoutSection">
+
+                <div class="order-item" style="display: block;">
+                    <div class="info-row" style="align-items: center;">
+                        <h2>账户状态</h2>
+                        <div class="header-btn-wrap">
+                            <button id="refreshBtn" class="form-button primary mini-action-btn" onclick="refreshAll()">
+                                <span class="btn__label">刷新数据</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="info-row" style="margin-bottom: 0;">
+                        <span>持有余额: <span id="balVal" style="font-weight: 600; color: var(--primary-color);">￥0.00</span></span>
+                    </div>
+                    <a href="/overview/"><button class="form-button primary"><span class="btn__label">回到仪表盘</span></button></a>
+                </div>
+
+                <div class="order-item" style="display: block;">
+                    <div class="info-row" style="margin-bottom: 5px;">
+                        <h2 id="orderTitle">正在检查订单</h2>
+                    </div>
+                    <div class="h20"></div>
+                    <div id="orderList" style="text-align: left; min-height: 40px;"></div>
+
+                    <div id="guidanceLine" class="guide-text hidden" style="text-align: center; margin-top: 15px; border-top: 1px solid rgba(128,128,128,0.1); padding-top: 10px;"></div>
+                    
+                    <div id="payActionContainer"></div>
+                </div>
+
+                <div class="order-item" style="display: block;">
+                    <div class="info-row" style="margin-bottom: 5px; align-items: center;">
+                        <h2>充值与兑换</h2>
+                        <div class="header-btn-wrap">
+                            <a href="https://m.tb.cn/h.7ImXUHT?tk=8e0UUiUL2c5" target="_blank" class="form-button primary mini-action-btn">
+                                <span class="btn__label">没有礼品卡？立即购买</span>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="h10"></div>
+                    <div class="sub-url-box">
+                        <input type="text" id="code" class="sub-url-input" placeholder="输入礼品卡代码" />
+                    </div>
+                    <div class="h10"></div>
+                    <button id="redeemBtn" class="form-button primary"><span class="btn__label">兑换</span></button>
+                    
+                    <div class="h20"></div>
+                    <div class="sub-url-box" style="margin-top: 0; opacity: 0.7;">
+                        <input type="text" id="statusBox" class="sub-url-input" value="FrostPeak 收银台" readonly style="text-align: center;" />
+                    </div>
+                </div>
+
+                <div class="h20"></div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+
+        let currentBalance = 0;
+        const sessionPaidSet = new Set();
+        const setStatus = (t) => { if (document.getElementById('statusBox')) document.getElementById('statusBox').value = t; };
+
+        // 仅更新余额显示
+        async function updateBalanceOnly() {
+            try {
+                const res = await fetch(`${API_BASE}/api/v1/user/info`, { headers: { 'Authorization': authToken } });
+                const d = await res.json();
+                if (d.data) {
+                    currentBalance = d.data.balance;
+                    if (document.getElementById('balVal')) document.getElementById('balVal').innerText = `￥${(currentBalance / 100).toFixed(2)}`;
+                }
+            } catch (e) { console.error("Balance Update Error"); }
+        }
+
+        // 刷新订单列表与余额
+        async function refreshAll() {
+            const refreshBtnLabel = document.querySelector('#refreshBtn .btn__label');
+            const refreshBtn = document.getElementById('refreshBtn');
+            
+            if (refreshBtnLabel && refreshBtnLabel.innerText === "•••") return;
+            if (refreshBtnLabel) refreshBtnLabel.innerText = "•••";
+            if (refreshBtn) refreshBtn.disabled = true;
+
+            try {
+                await updateBalanceOnly();
+                const oRes = await fetch(`${API_BASE}/api/v1/user/order/fetch?status=0`, { headers: { 'Authorization': authToken } });
+                const oData = await oRes.json();
+                renderOrders(oData.data || []);
+            } catch (e) { console.error("Refresh Error"); }
+            finally { 
+                if (refreshBtnLabel) refreshBtnLabel.innerText = "刷新数据"; 
+                if (refreshBtn) refreshBtn.disabled = false;
+            }
+        }
+
+        // 渲染订单列表 DOM
+        function renderOrders(orders) {
+            const list = document.getElementById('orderList');
+            const title = document.getElementById('orderTitle');
+            const guide = document.getElementById('guidanceLine');
+            const payContainer = document.getElementById('payActionContainer');
+            
+            if (!list) return;
+            list.innerHTML = '';
+            payContainer.innerHTML = ''; 
+            
+            if (orders.length === 0) {
+                title.innerText = "没有待支付订单";
+                list.innerHTML = '<p class="sub" style="margin-top: 10px; opacity: 0.6; text-align: center;">暂无待支付订单</p>';
+                if (guide) guide.classList.add('hidden');
+            } else {
+                title.innerText = "待支付订单";
+                if (guide) { guide.classList.remove('hidden'); guide.classList.add('animate'); }
+                
+                let highestPrice = 0;
+                
+                orders.forEach(o => {
+                    highestPrice = Math.max(highestPrice, o.total_amount);
+                    const isP = sessionPaidSet.has(o.trade_no);
+                    const enough = currentBalance >= o.total_amount;
+                    
+                    const item = document.createElement('div');
+                    item.className = 'info-row animate'; 
+                    item.style.borderBottom = '1px solid rgba(128,128,128,0.1)';
+                    item.style.paddingBottom = '10px';
+                    item.style.marginBottom = '10px';
+                    
+                    item.innerHTML = `
+                        <div style="text-align: left;">
+                            <div style="font-size:14px; font-weight:600; color: inherit;">${o.plan ? o.plan.name : "订阅项目"}</div>
+                            <div style="font-size:12px; color:var(--text-secondary); margin-top:2px;">订单号: ${o.trade_no.slice(-6)}</div>
+                            <div style="font-size:12px; color:var(--text-secondary);">还需要 ￥${(o.total_amount / 100).toFixed(2)} 的余额</div>
+                        </div>
+                        <div style="text-align: right;">
+                             <button id="cancelBtn_${o.trade_no}" class="form-button primary pay-btn-sm" 
+                                style="margin:0;"
+                                onclick="handleCancel('${o.trade_no}')">
+                                <span class="btn__label">关闭订单</span>
+                            </button>
+                        </div>
+                    `;
+                    list.appendChild(item);
+
+                    const btnLabel = isP ? '已支付' : (enough ? '立即支付' : '余额不足');
+                    const isDisabled = (!enough && !isP) || isP; 
+                    
+                    payContainer.innerHTML = `
+                        <button class="form-button primary ${isDisabled ? 'btn-disabled' : ''}" 
+                            ${isDisabled ? 'disabled' : ''}
+                            onclick="handlePay('${o.trade_no}', ${o.plan_id}, '${o.period}', this)">
+                            <span class="btn__label">${btnLabel}</span>
+                        </button>
+                    `;
+                });
+                
+                if(list.lastElementChild) list.lastElementChild.style.borderBottom = 'none';
+
+                if (guide) guide.innerHTML = currentBalance >= highestPrice ? '<div class="h20"></div><span class="guide-success">你的余额充足，可以完成订单</span>' : '<div class="h20"></div><span>余额不足，请先在下方充值</span>';
+            }
+        }
+
+        // 关闭订单逻辑
+        async function handleCancel(tid) {
+            const btn = event.target.closest('button');
+            const label = btn.querySelector('.btn__label');
+            if(btn) {
+                btn.disabled = true;
+                if(label) label.innerText = "···";
+            }
+            try {
+                await fetch(`${API_BASE}/api/v1/user/order/cancel`, { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json', 'Authorization': authToken }, 
+                    body: JSON.stringify({ trade_no: tid }) 
+                });
+                refreshAll();
+            } catch (e) {
+                refreshAll();
+            }
+        }
+
+        // 处理支付请求
+        async function handlePay(tid, pid, per, btn) {
+            const BALANCE_METHOD_ID = 1;
+            const label = btn.querySelector('.btn__label');
+            
+            // 禁用支付按钮
+            btn.disabled = true; 
+            label.innerText = "•••"; 
+            setStatus("正在操作中···");
+
+            // 禁用对应的“关闭订单”按钮
+            const cancelBtn = document.getElementById(`cancelBtn_${tid}`);
+            if (cancelBtn) cancelBtn.disabled = true;
+
+            try {
+                await fetch(`${API_BASE}/api/v1/user/order/cancel`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': authToken }, body: JSON.stringify({ trade_no: tid }) });
+                const sRes = await fetch(`${API_BASE}/api/v1/user/order/save`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': authToken }, body: JSON.stringify({ plan_id: pid, period: per }) });
+                const sData = await sRes.json();
+                const pRes = await fetch(`${API_BASE}/api/v1/user/order/checkout`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': authToken }, body: JSON.stringify({ trade_no: sData.data, method: BALANCE_METHOD_ID }) });
+                const pData = await pRes.json();
+
+                if (pData.status === 'success' || pData.data === true) {
+                    setStatus("✅ 操作成功");
+                    sessionPaidSet.add(tid);
+                    label.innerText = "已支付";
+                    setTimeout(updateBalanceOnly, 500);
+                    // 支付成功不解禁关闭按钮
+                } else { throw new Error(); }
+            } catch (e) {
+                alert("操作失败，请重试");
+                label.innerText = "支付";
+                btn.disabled = false;
+                // 失败时解禁关闭按钮
+                if (cancelBtn) cancelBtn.disabled = false;
+                setStatus("FrostPeak 收银台");
+            }
+        }
+
+        // 处理礼品卡兑换
+        async function handleRedeem() {
+            const code = document.getElementById('code').value.trim();
+            if (!code) return;
+            const btn = document.getElementById('redeemBtn');
+            btn.disabled = true; btn.classList.add('btn--loading'); setStatus("正在操作中···");
+            try {
+                const res = await fetch(`${API_BASE}/api/v1/user/gift-card/redeem`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': authToken }, body: JSON.stringify({ code }) });
+                const d = await res.json();
+                if (d.status === 'success') {
+                    setStatus("🎉 兑换成功");
+                    document.getElementById('code').value = '';
+                    refreshAll();
+                } else {
+                    setStatus("❌ " + d.message);
+                }
+            } catch (e) { setStatus("⚠️ 通信错误"); } finally { btn.disabled = false; btn.classList.remove('btn--loading'); }
+        }
+
+        (function initCheckout() {
+            injectMenu();
+            const redeemBtn = document.getElementById('redeemBtn');
+            if (redeemBtn) redeemBtn.addEventListener('click', handleRedeem);
+
+            if (authToken) {
+                refreshAll();
+            }
+        })();
+    </script>
+</body>
+</html>
