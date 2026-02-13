@@ -1,20 +1,22 @@
 <!DOCTYPE html>
 <html lang="zh">
+
 <head>
-  <meta charset="UTF-8" />
-  <title>自定义内容</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="color-scheme" content="light dark" />
-  <link href="/assets/css/style.css" rel="stylesheet" type="text/css" />
-  <script src="/assets/js/script.js"></script>
+    <meta charset="UTF-8" />
+    <title>自定义名称</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <link href="/assets/css/style.css" rel="stylesheet" type="text/css" />
+    <script src="/assets/js/script.js"></script>
 </head>
+
 <body>
 
     <div class="card">
 
         <div class="top-bar">
             <div class="nav-brand">
-                <img class="logo-small" src="/favicon.png" alt="自定义内容" />
+                <img class="logo-small" src="/favicon.png" alt="自定义名称" />
                 <span id="visualTitle" class="page-title-text">仪表盘</span>
             </div>
             <div id="headerMenuContainer"></div>
@@ -36,6 +38,9 @@
                         <span>下次重置</span>
                         <span id="nextReset">···</span>
                     </div>
+                    <a href="/start/">
+                        <button class="form-button primary"><span class="btn__label">上手指南</span></button>
+                    </a>
                 </div>
 
                 <div class="order-item" style="display: block;">
@@ -45,23 +50,19 @@
                     <div class="info-row">
                         <span id="trafficTotalText" style="font-weight: 600;">···</span>
                     </div>
-                    <div style="height: 6px; background: rgba(128,128,128,0.15); border-radius: 3px; overflow: hidden; margin: 12px 0;">
-                        <div id="trafficBar" style="width: 0%; height: 100%; background: var(--primary-color); transition: width 0.6s ease;"></div>
+                    <div
+                        style="height: 6px; background: rgba(128,128,128,0.15); border-radius: 3px; overflow: hidden; margin: 12px 0;">
+                        <div id="trafficBar"
+                            style="width: 0%; height: 100%; background: var(--primary-color); transition: width 0.6s ease;">
+                        </div>
                     </div>
                     <div class="info-row" style="font-size: 11px; opacity: 0.8;">
                         <span>上传: <span id="trafficU">0.00</span> GB</span>
                         <span>下载: <span id="trafficD">0.00</span> GB</span>
                     </div>
-                </div>
-
-                <div class="order-item" style="display: block;">
-                    <div class="info-row" style="margin-bottom: 5px;">
-                        <h2>添加订阅</h2>
-                    </div>
-                    <div class="sub-url-box">
-                        <input type="text" id="subUrl" class="sub-url-input" readonly value="···" />
-                    </div>
-                    <button id="copySubBtn" class="form-button primary"><span class="btn__label">一键复制订阅链接</span></button>
+                    <a href="/traffic/">
+                        <button class="form-button primary"><span class="btn__label">查询流量明细</span></button>
+                    </a>
                 </div>
 
                 <div class="order-item" style="display: block;">
@@ -76,7 +77,9 @@
                         <h2>计划详情</h2>
                     </div>
 
-                    <div id="planDesc" style="text-align: left; font-size: 13px; color: var(--text-secondary); white-space: pre-wrap; margin-bottom: 15px; line-height: 1.5; opacity: 0.9;"></div>
+                    <div id="planDesc"
+                        style="text-align: left; font-size: 13px; color: var(--text-secondary); white-space: pre-wrap; margin-bottom: 15px; line-height: 1.5; opacity: 0.9;">
+                    </div>
 
                     <hr id="planDescDivider" class="section-divider">
 
@@ -88,6 +91,9 @@
                         <span>速率上限</span>
                         <span id="speedLimit">···</span>
                     </div>
+                    <a href="/server/">
+                        <button class="form-button primary"><span class="btn__label">服务器状态</span></button>
+                    </a>
                 </div>
 
                 <div class="order-item" style="display: block;">
@@ -96,7 +102,8 @@
                     </div>
                     <div class="info-row">
                         <span>持有余额</span>
-                        <span style="font-weight: 600; color: var(--primary-color);">¥ <span id="balance">0.00</span></span>
+                        <span style="font-weight: 600; color: var(--primary-color);">¥ <span
+                                id="balance">0.00</span></span>
                     </div>
                     <div class="info-row">
                         <span>UUID</span>
@@ -110,107 +117,109 @@
                         <span>上次登录</span>
                         <span id="lastLogin">···</span>
                     </div>
-                    <button class="form-button primary" onclick="window.location.href='https://account.frostpeak.app/自定义内容/'"><span class="btn__label">管理账户</span></button>
-
+                    <a href="https://账户管理地址" target="_blank">
+                        <button class="form-button primary"><span class="btn__label">管理账户</span></button>
+                    </a>
                 </div>
 
             </div>
         </div>
     </div>
 
-  <script>
-    function toGB(bytes) {
-        return (Number(bytes) / 1073741824).toFixed(2);
-    }
+    <script>
+        function toGB(bytes) {
+            return (Number(bytes) / 1073741824).toFixed(2);
+        }
 
-    function initoverview() {
-        const headers = { 'Authorization': authToken };
+        function initoverview() {
+            const headers = { 'Authorization': authToken };
 
-        // 获取订阅详情
-        fetchWithCache(`${API_BASE}/api/v1/user/getSubscribe`, { headers }, (subJson) => {
-            if (subJson.data) {
-                const data = subJson.data;
-                document.getElementById('planName').textContent = (data.plan && data.plan.name) ? data.plan.name : "有效订阅";
-                
-                document.getElementById('planExpire').textContent = data.expired_at ? new Date(data.expired_at * 1000).toLocaleString() : "长期有效";
-                document.getElementById('nextReset').textContent = data.next_reset_at ? new Date(data.next_reset_at * 1000).toLocaleString() : "不重置";
+            // 获取订阅详情
+            fetchWithCache(`${API_BASE}/api/v1/user/getSubscribe`, { headers }, (subJson) => {
+                if (subJson.data) {
+                    const data = subJson.data;
+                    document.getElementById('planName').textContent = (data.plan && data.plan.name) ? data.plan.name : "有效订阅";
 
-                const planDescEl = document.getElementById('planDesc');
-                const planDividerEl = document.getElementById('planDescDivider');
-                if (data.plan && data.plan.content) {
-                    planDescEl.textContent = data.plan.content;
-                } else {
-                    planDescEl.style.display = 'none';
-                    if(planDividerEl) planDividerEl.style.display = 'none';
-                }
+                    document.getElementById('planExpire').textContent = data.expired_at ? new Date(data.expired_at * 1000).toLocaleString() : "长期有效";
+                    document.getElementById('nextReset').textContent = data.next_reset_at ? new Date(data.next_reset_at * 1000).toLocaleString() : "不重置";
 
-                const uGB = toGB(data.u || 0);
-                const dGB = toGB(data.d || 0);
-                const totalAllowed = Number(data.transfer_enable) || 0;
-                const usedTotal = (Number(data.u) || 0) + (Number(data.d) || 0);
-                
-                document.getElementById('trafficU').textContent = uGB;
-                document.getElementById('trafficD').textContent = dGB;
-                document.getElementById('trafficTotalText').textContent = `已用 ${toGB(usedTotal)} GB / 总计 ${toGB(totalAllowed)} GB`;
-                
-                const percent = totalAllowed > 0 ? Math.min(100, (usedTotal / totalAllowed) * 100) : 0;
-                document.getElementById('trafficBar').style.width = `${percent}%`;
-
-                document.getElementById('deviceLimit').textContent = data.device_limit ? `${data.device_limit} 台设备` : "无限制";
-                document.getElementById('speedLimit').textContent = data.speed_limit ? `${data.speed_limit} Mbps` : "不限速";
-
-                document.getElementById('subUrl').value = data.subscribe_url || "获取失败";
-                
-                document.getElementById('copySubBtn').onclick = () => {
-                    navigator.clipboard.writeText(data.subscribe_url);
-                    const label = document.querySelector('#copySubBtn .btn__label');
-                    const originalText = "一键复制订阅链接";
-                    label.textContent = "已复制!";
-                    setTimeout(() => { label.textContent = originalText; }, 2000);
-                };
-            }
-        });
-
-        // 获取公告
-        fetchWithCache(`${API_BASE}/api/v1/user/notice/fetch`, { headers }, (noticeJson) => {
-            const noticeList = document.getElementById('noticeList');
-            if (noticeJson.data && noticeJson.data.length > 0) {
-                noticeList.innerHTML = '';
-                noticeJson.data.forEach((item, index) => {
-                    const noticeItem = document.createElement('div');
-                    noticeItem.className = 'announcement-item';
-                    noticeItem.innerHTML = `<h3>${item.title}</h3><div class="h10"></div><span>${item.content}</span>`;
-                    noticeList.appendChild(noticeItem);
-                    
-                    if (index < noticeJson.data.length - 1) {
-                        const hr = document.createElement('hr');
-                        hr.className = 'section-divider';
-                        noticeList.appendChild(hr);
+                    const planDescEl = document.getElementById('planDesc');
+                    const planDividerEl = document.getElementById('planDescDivider');
+                    if (data.plan && data.plan.content) {
+                        planDescEl.textContent = data.plan.content;
+                    } else {
+                        planDescEl.style.display = 'none';
+                        if (planDividerEl) planDividerEl.style.display = 'none';
                     }
-                });
-            } else {
-                noticeList.innerHTML = '<span style="font-size:12px; opacity:0.5;">暂无公告</span>';
-            }
-        });
 
-        // 获取账户信息
-        fetchWithCache(`${API_BASE}/api/v1/user/info`, { headers }, (infoJson) => {
-            if (infoJson.data) {
-                const info = infoJson.data;
-                document.getElementById('balance').textContent = (info.balance / 100).toFixed(2);
-                document.getElementById('userUUID').textContent = info.uuid || "未知";
-                document.getElementById('joinDate').textContent = new Date(info.created_at * 1000).toLocaleDateString();
-                document.getElementById('lastLogin').textContent = new Date(info.last_login_at * 1000).toLocaleString();
-            }
-        });
-    }
+                    const uGB = toGB(data.u || 0);
+                    const dGB = toGB(data.d || 0);
+                    const totalAllowed = Number(data.transfer_enable) || 0;
+                    const usedTotal = (Number(data.u) || 0) + (Number(data.d) || 0);
 
-    (function init() {
-      injectMenu();
-      if (authToken && currentPath !== '/' && currentPath !== '/index.html') {
-        initoverview();
-      }
-    })();
-  </script>
+                    document.getElementById('trafficU').textContent = uGB;
+                    document.getElementById('trafficD').textContent = dGB;
+                    document.getElementById('trafficTotalText').textContent = `已用 ${toGB(usedTotal)} GB / 总计 ${toGB(totalAllowed)} GB`;
+
+                    const percent = totalAllowed > 0 ? Math.min(100, (usedTotal / totalAllowed) * 100) : 0;
+                    document.getElementById('trafficBar').style.width = `${percent}%`;
+
+                    document.getElementById('deviceLimit').textContent = data.device_limit ? `${data.device_limit} 台设备` : "无限制";
+                    document.getElementById('speedLimit').textContent = data.speed_limit ? `${data.speed_limit} Mbps` : "不限速";
+
+                    document.getElementById('subUrl').value = data.subscribe_url || "获取失败";
+
+                    document.getElementById('copySubBtn').onclick = () => {
+                        navigator.clipboard.writeText(data.subscribe_url);
+                        const label = document.querySelector('#copySubBtn .btn__label');
+                        const originalText = "复制订阅链接";
+                        label.textContent = "已复制!";
+                        setTimeout(() => { label.textContent = originalText; }, 2000);
+                    };
+                }
+            });
+
+            // 获取公告
+            fetchWithCache(`${API_BASE}/api/v1/user/notice/fetch`, { headers }, (noticeJson) => {
+                const noticeList = document.getElementById('noticeList');
+                if (noticeJson.data && noticeJson.data.length > 0) {
+                    noticeList.innerHTML = '';
+                    noticeJson.data.forEach((item, index) => {
+                        const noticeItem = document.createElement('div');
+                        noticeItem.className = 'announcement-item';
+                        noticeItem.innerHTML = `<h3>${item.title}</h3><div class="h10"></div><span>${item.content}</span>`;
+                        noticeList.appendChild(noticeItem);
+
+                        if (index < noticeJson.data.length - 1) {
+                            const hr = document.createElement('hr');
+                            hr.className = 'section-divider';
+                            noticeList.appendChild(hr);
+                        }
+                    });
+                } else {
+                    noticeList.innerHTML = '<span style="font-size:12px; opacity:0.5;">暂无公告</span>';
+                }
+            });
+
+            // 获取账户信息
+            fetchWithCache(`${API_BASE}/api/v1/user/info`, { headers }, (infoJson) => {
+                if (infoJson.data) {
+                    const info = infoJson.data;
+                    document.getElementById('balance').textContent = (info.balance / 100).toFixed(2);
+                    document.getElementById('userUUID').textContent = info.uuid || "未知";
+                    document.getElementById('joinDate').textContent = new Date(info.created_at * 1000).toLocaleDateString();
+                    document.getElementById('lastLogin').textContent = new Date(info.last_login_at * 1000).toLocaleString();
+                }
+            });
+        }
+
+        (function init() {
+            injectMenu();
+            if (authToken && currentPath !== '/' && currentPath !== '/index.html') {
+                initoverview();
+            }
+        })();
+    </script>
 </body>
+
 </html>

@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>自定义名称</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <link href="/assets/css/style.css" rel="stylesheet" type="text/css" />
+    <script src="/assets/js/script.js"></script>
+</head>
+
+<body>
+
+    <div class="card">
+
+        <div class="top-bar">
+            <div class="nav-brand">
+                <img class="logo-small" src="/favicon.png" alt="自定义名称" />
+                <span id="visualTitle" class="page-title-text">流量明细</span>
+            </div>
+            <div id="headerMenuContainer"></div>
+        </div>
+
+        <div class="cardin center animate">
+
+            <div class="order-item" style="display: block;">
+                <div class="info-row" style="margin-bottom: 0; align-items: center; text-align: center !important">
+                    <h3 style="width: 100%; text-align: center;">流量明细不是实时数据。当客户端连接断开后，你的流量才会被统计并记录。</h3>
+                </div>
+                <div class="info-row" style="margin-bottom: 0; width: 100%;">
+                    <span style="margin-bottom: 10px; width: 100%; text-align: center;">流量记录不是一个精确的数据，因此不包含具体时间</span>
+                </div>
+            </div>
+
+            <div class="h20"></div>
+
+            <div class="order-item" style="display: block; padding-bottom: 10px;">
+                <div id="trafficListContainer">
+                    <p class="sub" style="margin-top: 20px;">正在获取数据...</p>
+                </div>
+            </div>
+
+            <div class="h20"></div>
+            <p class="sub" style="opacity: 0.4; font-size: 11px; text-align: center;">对流量消耗有疑问？请联系我们，我们的联系方式可以在菜单中找到。
+            </p>
+        </div>
+    </div>
+
+    <script>
+        function formatBytes(bytes, decimals = 2) {
+            if (!+bytes) return '0 B';
+            const k = 1024;
+            const dm = decimals < 0 ? 0 : decimals;
+            const sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+        }
+
+        function initTrafficLog() {
+            const container = document.getElementById('trafficListContainer');
+            const headers = { 'Authorization': authToken };
+
+            fetchWithCache(`${API_BASE}/api/v1/user/stat/getTrafficLog`, { headers }, (json) => {
+                if (json.data && json.data.length > 0) {
+                    container.innerHTML = '';
+
+                    json.data.forEach((log, index) => {
+                        const up = parseFloat(log.u);
+                        const down = parseFloat(log.d);
+                        const rate = parseFloat(log.server_rate);
+                        const totalUsed = (up + down) * rate;
+
+                        const dateText = new Date(log.record_at * 1000).toLocaleDateString('zh-CN', {
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit'
+                        });
+
+                        const itemHtml = `
+                            <div class="traffic-row-wrap" style="padding: 5px 0;">
+                                <div class="info-row" style="margin-bottom: 6px;">
+                                    <span style="font-weight: 500;">${dateText}</span>
+                                    <span class="traffic-usage-positive">-${formatBytes(totalUsed)}</span>
+                                </div>
+                                <div class="info-row" style="margin-bottom: 0;">
+                                    <span class="traffic-detail-text">
+                                        ↑ ${formatBytes(up)} &nbsp;|&nbsp; ↓ ${formatBytes(down)}
+                                    </span>
+                                    <span class="rate-tag">倍率: ${rate}x</span>
+                                </div>
+                            </div>
+                        `;
+
+                        const div = document.createElement('div');
+                        div.innerHTML = itemHtml;
+                        container.appendChild(div);
+
+                        if (index < json.data.length - 1) {
+                            const hr = document.createElement('hr');
+                            hr.className = 'section-divider';
+                            hr.style.margin = '10px 0';
+                            container.appendChild(hr);
+                        }
+                    });
+
+                } else {
+                    container.innerHTML = '<p class="sub" style="margin-top: 20px; opacity: 0.5;">没有流量记录</p>';
+                }
+            });
+        }
+
+        (function init() {
+            injectMenu();
+            if (authToken) {
+                initTrafficLog();
+            }
+        })();
+    </script>
+</body>
+
+</html>

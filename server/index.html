@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>自定义名称</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <link href="/assets/css/style.css" rel="stylesheet" type="text/css" />
+    <script src="/assets/js/script.js"></script>
+</head>
+
+<body>
+
+    <div class="card">
+
+        <div class="top-bar">
+            <div class="nav-brand">
+                <img class="logo-small" src="/favicon.png" alt="自定义名称" />
+                <span id="visualTitle" class="page-title-text">服务器状态</span>
+            </div>
+            <div id="headerMenuContainer"></div>
+        </div>
+
+        <div class="cardin center animate">
+
+            <div class="order-item" style="display: block;">
+                <div class="info-row" style="margin-bottom: 0; align-items: center; text-align: center !important">
+                    <h3 style="margin-top: 10px; width: 100%; text-align: center;">查询服务器的实时状态。</h3>
+                </div>
+                <div class="info-row" style="margin-bottom: 0; width: 100%;">
+                    <span style="margin-bottom: 10px; width: 100%; text-align: center;">你可以通过服务器状态和你自己的连通性，判断问题出在哪里</span>
+                </div>
+
+            </div>
+
+            <div class="h20"></div>
+
+            <div class="order-item" style="display: block; padding-bottom: 10px;">
+                <div id="serverListContainer">
+                    <p class="sub" style="margin-top: 20px;">正在载入服务器信息···</p>
+                </div>
+            </div>
+
+            <div class="h20"></div>
+            <p class="sub" style="opacity: 0.4; font-size: 11px; text-align: center;">如果你的节点与此处服务器列表不一致，请尝试更新订阅</p>
+        </div>
+    </div>
+
+    <script>
+        function initServerStatus() {
+            const container = document.getElementById('serverListContainer');
+            const headers = { 'Authorization': authToken };
+
+            fetchWithCache(`${API_BASE}/api/v1/user/server/fetch`, { headers }, (json) => {
+                if (json.data && json.data.length > 0) {
+                    container.innerHTML = '';
+
+                    json.data.forEach((server, index) => {
+                        const isOnline = server.is_online === 1;
+
+                        // 生成标签 HTML 字符串 (只生成 span，不包外层 div)
+                        let tagsInnerHtml = '';
+                        if (server.tags && server.tags.length > 0) {
+                            server.tags.forEach(tag => {
+                                tagsInnerHtml += `<span class="server-tag">${tag}</span>`;
+                            });
+                        }
+
+                        // 生成倍率 HTML 字符串
+                        let rateHtml = '';
+                        if (server.rate > 0) {
+                            rateHtml = `<span class="rate-high">倍率: x${server.rate}</span>`;
+                        }
+
+                        // 只有当有标签 或 有倍率时，才渲染第二行
+                        let secondRowHtml = '';
+                        if (tagsInnerHtml || rateHtml) {
+                            secondRowHtml = `
+                                <div class="info-row" style="margin-top: 16px; margin-bottom: 0; align-items: center;">
+                                    <div style="display: flex; flex-wrap: wrap; gap: 4px; padding-right: 10px;">
+                                        ${tagsInnerHtml}
+                                    </div>
+                                    <div style="flex-shrink: 0;">
+                                        ${rateHtml}
+                                    </div>
+                                </div>
+                            `;
+                        }
+
+                        const itemHtml = `
+                            <div style="padding: 5px 0;">
+                                <div class="info-row" style="align-items: center; margin-bottom: 0;">
+                                    <span class="server-name">${server.name}</span>
+                                    <div style="display:flex; align-items:center; flex-shrink: 0;">
+                                        <span class="status-dot ${isOnline ? 'status-online' : 'status-offline'}"></span>
+                                        <span class="${isOnline ? 'status-text-online' : 'status-text-offline'}">
+                                            ${isOnline ? '正常' : '维护/离线'}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                ${secondRowHtml}
+                            </div>
+                        `;
+
+                        const div = document.createElement('div');
+                        div.innerHTML = itemHtml;
+                        container.appendChild(div);
+
+                        if (index < json.data.length - 1) {
+                            const hr = document.createElement('hr');
+                            hr.className = 'section-divider';
+                            hr.style.margin = '10px 0';
+                            container.appendChild(hr);
+                        }
+                    });
+
+                } else {
+                    container.innerHTML = '<p class="sub" style="margin-top: 20px; opacity: 0.5;">暂无节点信息</p>';
+                }
+            });
+        }
+
+        (function init() {
+            injectMenu();
+            if (authToken) {
+                initServerStatus();
+            }
+        })();
+    </script>
+</body>
+
+</html>

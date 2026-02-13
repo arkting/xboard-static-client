@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>自定义名称</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <link href="/assets/css/style.css" rel="stylesheet" type="text/css" />
+    <script src="/assets/js/script.js"></script>
+</head>
+
+<body>
+
+    <div class="card">
+
+        <div class="top-bar">
+            <div class="nav-brand">
+                <img class="logo-small" src="/favicon.png" alt="自定义名称" />
+                <span id="visualTitle" class="page-title-text">订单记录</span>
+            </div>
+            <div id="headerMenuContainer"></div>
+        </div>
+
+        <div class="cardin center animate">
+
+            <div class="order-item" style="display: block;">
+                <div class="info-row" style="margin-bottom: 0; align-items: center;">
+                    <h3 style="margin-top: 16px">有未完成的订单？</h3>
+                    <div class="header-btn-wrap">
+                        <a href="/checkout/"
+                            class="form-button primary mini-action-btn">
+                            <span class="btn__label">前往收银台</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="h20"></div>
+
+            <div id="orderHistoryList">
+                <p class="sub" style="margin-top: 20px;">正在载入订单记录，请稍后···</p>
+            </div>
+
+            <div class="h20"></div>
+            <p class="sub" style="opacity: 0.4; font-size: 11px; text-align: center;">未能找到订单？请联系我们，我们的联系方式可以在菜单中找到。</p>
+        </div>
+    </div>
+
+    <script>
+        // 周期映射文案
+        const PeriodMap = {
+            'month_price': '月付',
+            'quarter_price': '季付',
+            'half_year_price': '半年付',
+            'year_price': '年付',
+            'two_year_price': '两年付',
+            'three_year_price': '三年付',
+            'onetime_price': '一次性',
+            'reset_price': '流量重置'
+        };
+
+        // 状态映射修正：2 为已取消，3 为已开通，符合 XBoard 最新逻辑
+        const StatusMap = {
+            0: { text: '待支付', class: 'status-pending' },
+            1: { text: '开通中', class: 'status-pending' },
+            2: { text: '已取消', class: 'status-cancelled' }, 
+            3: { text: '已开通', class: 'status-completed' }, 
+            4: { text: '已退款', class: 'status-cancelled' }
+        };
+
+        async function initOrderHistory() {
+            const container = document.getElementById('orderHistoryList');
+            const headers = { 'Authorization': authToken };
+
+            try {
+                // 强制获取最新数据
+                const res = await fetch(`${API_BASE}/api/v1/user/order/fetch`, { headers });
+                const json = await res.json();
+
+                if (json.data && json.data.length > 0) {
+                    container.innerHTML = '';
+
+                    json.data.forEach(order => {
+                        const statusInfo = StatusMap[order.status] || { text: '未知', class: '' };
+                        const periodText = PeriodMap[order.period] || '其他';
+                        
+                        // 时间格式：精确到秒
+                        const dateText = new Date(order.created_at * 1000).toLocaleString('zh-CN', {
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit',
+                            hour12: false
+                        });
+                        
+                        const amount = (order.total_amount / 100).toFixed(2);
+
+                        const item = document.createElement('div');
+                        item.className = 'order-item animate';
+                        item.style.display = 'block';
+
+                        item.innerHTML = `
+                            <div class="info-row">
+                                <div style="text-align: left;">
+                                    <div style="font-size:15px; font-weight:600;">${order.plan ? order.plan.name : '订阅项目'}</div>
+                                    <div style="font-size:12px; color:var(--text-secondary); margin-top:6px;">订单号: ${order.trade_no}</div>
+                                </div>
+                                <div style="text-align: right;">
+                                    <div style="font-size:15px; font-weight:600; color: var(--primary-color);">￥${amount}</div>
+                                    <div class="status-tag ${statusInfo.class}" style="margin-top:6px;">${statusInfo.text}</div>
+                                </div>
+                            </div>
+                            
+                            <hr class="section-divider">
+                            
+                            <div class="info-row" style="margin-bottom: 0; font-size: 12px; opacity: 0.8;">
+                                <span>${dateText}</span>
+                                <span>规格: ${periodText}</span>
+                            </div>
+                        `;
+                        container.appendChild(item);
+                    });
+                } else {
+                    container.innerHTML = '<p class="sub" style="margin-top: 20px; opacity: 0.5;">暂无相关记录</p>';
+                }
+            } catch (e) {
+                container.innerHTML = '<p class="sub" style="margin-top: 20px; color: #ff4d4f;">数据加载失败，请检查网络</p>';
+            }
+        }
+
+        (function init() {
+            injectMenu();
+            if (authToken) {
+                initOrderHistory();
+            }
+        })();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>自定义名称</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <link href="/assets/css/style.css" rel="stylesheet" type="text/css" />
+    <script src="/assets/js/script.js"></script>
+</head>
+
+<body>
+
+    <div class="card">
+
+        <div class="top-bar">
+            <div class="nav-brand">
+                <img class="logo-small" src="/favicon.png" alt="自定义名称" />
+                <span id="visualTitle" class="page-title-text">上手指南</span>
+            </div>
+            <div id="headerMenuContainer"></div>
+        </div>
+
+        <div class="cardin center animate">
+
+            <div id="overviewSection">
+
+                <div class="order-item" style="display: block;">
+                    <div class="info-row" style="margin-bottom: 0; align-items: center; text-align: center !important">
+                        <h2 style="margin-top: 10px; width: 100%; text-align: center;">我们尚未准备好指南，还请耐心等待</h2>
+                    </div>
+                    <div class="info-row" style="margin-bottom: 0; width: 100%;">
+                        <span
+                            style="margin-bottom: 10px; width: 100%; text-align: center;">不过你现在可以快速获取订阅链接</span>
+                    </div>
+                </div>
+
+                <div class="order-item" style="display: block;">
+                    <div class="info-row" style="margin-bottom: 5px;">
+                        <h2>订阅链接</h2>
+                    </div>
+                    <div class="sub-url-box">
+                        <input type="text" id="subUrl" class="sub-url-input" readonly value="正在获取..." />
+                    </div>
+                    <button id="copySubBtn" class="form-button primary"><span class="btn__label">复制订阅链接</span></button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function initSimpleOverview() {
+            const headers = { 'Authorization': authToken };
+
+            // 仅获取订阅链接
+            fetchWithCache(`${API_BASE}/api/v1/user/getSubscribe`, { headers }, (subJson) => {
+                if (subJson.data) {
+                    const data = subJson.data;
+                    const subUrlInput = document.getElementById('subUrl');
+                    const copyBtn = document.getElementById('copySubBtn');
+
+                    // 填充链接
+                    subUrlInput.value = data.subscribe_url || "获取失败";
+
+                    // 绑定复制事件
+                    copyBtn.onclick = () => {
+                        if (!data.subscribe_url) return;
+                        navigator.clipboard.writeText(data.subscribe_url);
+
+                        const label = copyBtn.querySelector('.btn__label');
+                        const originalText = "复制订阅链接";
+
+                        label.textContent = "已复制!";
+                        setTimeout(() => { label.textContent = originalText; }, 2000);
+                    };
+                }
+            });
+        }
+
+        (function init() {
+            injectMenu();
+            if (authToken) {
+                initSimpleOverview();
+            }
+        })();
+    </script>
+</body>
+
+</html>
